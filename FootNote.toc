@@ -1,0 +1,10 @@
+## Interface: 80000
+## Title: FootNote
+## Title-zhCN: FootNote - 脚本收集
+## Author: sixue
+## Version: 0.0.1
+## Notes: My script collections
+## Notes-zhCN: 我的脚本收集
+
+Patch.lua
+nClock.lua
