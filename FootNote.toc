@@ -1,4 +1,4 @@
-## Interface: 80000
+## Interface: 90001
 ## Title: FootNote
 ## Title-zhCN: FootNote - 脚本收集
 ## Author: sixue
