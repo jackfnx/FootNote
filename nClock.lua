@@ -9,43 +9,14 @@
 
 --]]-----------------------------------------------------------------
 
-local SORT_BY_NAME = false
-local ANCHORPOINT = "BOTTOMLEFT"
+local ANCHOR_POINT = "BOTTOMRIGHT"
+local X0 = -320
 local CLOCK_WIDTH = 360
-local CLOCK_HEIGHT = 52
+local CLOCK_HEIGHT = 43
 local CLOCK_AZERITE_HEIGHT = 20
 local CLOCK_BAR_HEIGHT = 3
 
     --========[ important functions ]========--
-
-local function Addoncompare(a, b)
-    return a.memory > b.memory
-end
-
-local function MemFormat(v)
-    if (v > 1024) then
-        return string.format("%.2f MiB", v / 1024)
-    else
-        return string.format("%.2f KiB", v)
-    end
-end
-
-local function ColorGradient(perc, ...)
-	if (perc > 1) then
-		local r, g, b = select(select('#', ...) - 2, ...)
-		return r, g, b
-	elseif (perc < 0) then
-		local r, g, b = ...
-		return r, g, b
-	end
-	
-	local num = select('#', ...) / 3
-
-	local segment, relperc = math.modf(perc*(num-1))
-	local r1, g1, b1, r2, g2, b2 = select((segment*3)+1, ...)
-
-	return r1 + (r2-r1)*relperc, g1 + (g2-g1)*relperc, b1 + (b2-b1)*relperc
-end
 
 local function TimeFormat(time)
 	local t = format("%.1ds",floor(mod(time,60)))
@@ -110,10 +81,8 @@ end
 
     --========[ frames ]========--
 
-local class_color = RAID_CLASS_COLORS[select(2, UnitClass("player"))]
-
 local nClock = CreateFrame("Frame", "nClock", UIParent)
-nClock:SetPoint(ANCHORPOINT, UIParent)
+nClock:SetPoint(ANCHOR_POINT, UIParent, ANCHOR_POINT, X0, 0)
 nClock:SetHeight(CLOCK_HEIGHT)
 nClock:SetWidth(CLOCK_WIDTH)
 nClock:SetMovable(true)
@@ -179,7 +148,7 @@ nClock:SetScript("OnUpdate", function(self, elapsed)
             text0:SetText("  Azerite Energy: "..xp.."/"..totalLevelXP.."  ")
             text0:Show()
             bar0:Show()
-            
+
         elseif HasArtifactEquipped() then
             local _, _, _, _, totalXP, pointsSpent, _, _, _, _, _, _, artifactTier = C_ArtifactUI.GetEquippedArtifactInfo()
             local _, xp, xpForNextPoint = ArtifactBarGetNumArtifactTraitsPurchasableFromXP(pointsSpent, totalXP, artifactTier)
@@ -213,15 +182,16 @@ nClock:SetScript("OnUpdate", function(self, elapsed)
 end)
 
     --========[ make the frame movable ]========--
-  
-nClock:SetScript("OnMouseDown", function()
+
+nClock:SetScript("OnMouseDown", function(self, button)
     if (IsAltKeyDown()) then
-        nClock:ClearAllPoints()
+        -- nClock:ClearAllPoints()
         nClock:StartMoving()
     end
 end)
-nClock:SetScript("OnMouseUp", function()
+nClock:SetScript("OnMouseUp", function(self, button)
     nClock:StopMovingOrSizing()
+    local point, _, _, x, y = self:GetPoint(1)
 end)
 
     --========[ tooltip ]========--
@@ -233,7 +203,7 @@ nClock:SetScript("OnEnter", function()
     local latency3color = ColorizeLatency(select(3, GetNetStats()))
     local latency4color = ColorizeLatency(select(4, GetNetStats()))
     local fpscolor = ColorizeFramerate(GetFramerate())
-        
+
     GameTooltip:AddLine(date("%A, %d %B, %Y"), 1, 1, 1)
     GameTooltip:AddDoubleLine("Framerate:", format("%.1f Hz", GetFramerate()), 1, 1, 1, fpscolor.r, fpscolor.g, fpscolor.b)
     GameTooltip:AddDoubleLine("Latency HOME:", format("%d ms", select(3, GetNetStats())), 1, 1, 1, latency3color.r, latency3color.g, latency3color.b)
@@ -241,46 +211,9 @@ nClock:SetScript("OnEnter", function()
     GameTooltip:AddDoubleLine("System Uptime:", TimeFormat(GetTime()), 1, 1, 1, 1, 1, 1)
  	GameTooltip:AddDoubleLine(". . . . . . . . . . .", ". . . . . . . . . . .", 1, 1, 1, 1, 1, 1)
 
-    addons = {}
-    total = 0
-    UpdateAddOnMemoryUsage()
-    for i = 1, GetNumAddOns(), 1 do
-        if GetAddOnMemoryUsage(i) > 0 then
-            memory = GetAddOnMemoryUsage(i)
-            entry = {name = GetAddOnInfo(i), memory = memory}
-            table.insert(addons, entry)
-            total = total + memory
-        end
-    end
-    
-    if (SORT_BY_NAME == false) then 
-        table.sort(addons, Addoncompare)
-    end
-
-   for _,entry in pairs(addons) do
-		local cr, cg, cb = ColorGradient((entry.memory / 800), 0, 1, 0, 1, 1, 0, 1, 0, 0)
-		GameTooltip:AddDoubleLine(entry.name, MemFormat(entry.memory), 1, 1, 1, cr, cg, cb)
-	end
-    local cr, cg, cb = ColorGradient((entry.memory / 800), 0, 1, 0, 1, 1, 0, 1, 0, 0) 
-    GameTooltip:AddDoubleLine(". . . . . . . . . . .", ". . . . . . . . . . .", 1, 1, 1, 1, 1, 1)
-    GameTooltip:AddDoubleLine("Total", MemFormat(total), 1, 1, 1, cr, cg, cb)
-    GameTooltip:AddDoubleLine("..with Blizzard", MemFormat(collectgarbage("count")), 1, 1, 1, cr, cg, cb)
     GameTooltip:Show()
 end)
 
-nClock:SetScript("OnLeave", function() 
-    GameTooltip:Hide() 
+nClock:SetScript("OnLeave", function()
+    GameTooltip:Hide()
 end)
-
-    --========[ mem cleanup ]========--
-
--- nClock:SetScript("OnClick", function()
---     if (not IsAltKeyDown()) then
---         UpdateAddOnMemoryUsage()
---         local memBefore = gcinfo()
---         collectgarbage()
---         UpdateAddOnMemoryUsage()
---         local memAfter = gcinfo()
---         DEFAULT_CHAT_FRAME:AddMessage("Memory cleaned: |cff00FF00"..MemFormat(memBefore - memAfter))
---     end
--- end)
